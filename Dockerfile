@@ -1,4 +1,4 @@
-FROM rust:1.54-alpine
+FROM rust:latest
 COPY . .
 RUN cargo install --path .
 CMD ["gitlab_auto_merge"]
