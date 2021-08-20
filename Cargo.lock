@@ -413,8 +413,9 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "gitlab",
- "reqwest",
- "serde_json",
+ "lazy_static",
+ "serde",
+ "url",
 ]
 
 [[package]]
