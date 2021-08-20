@@ -1,0 +1,9 @@
+image: rust:latest
+
+test:
+  before_script:
+    - rustup component add rustfmt
+  script:
+    - cargo fmt --all -- --check
+    - rustc --version && cargo --version  # Print version info for debugging
+    - cargo test --workspace --verbose
