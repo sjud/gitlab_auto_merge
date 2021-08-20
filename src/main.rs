@@ -1,8 +1,10 @@
 use clap::Clap;
+use gitlab::api::projects::merge_requests::{
+    ApproveMergeRequest, CreateMergeRequest, MergeRequestState, MergeRequests,
+};
+use gitlab::api::Query;
 use gitlab::Gitlab;
 use lazy_static::lazy_static;
-use gitlab::api::projects::merge_requests::{CreateMergeRequest, MergeRequests, MergeRequestState, ApproveMergeRequest};
-use gitlab::api::Query;
 use serde::Deserialize;
 
 lazy_static! {
@@ -10,8 +12,8 @@ lazy_static! {
         std::env::var("GITLAB_PRIVATE_TOKEN").expect("Expecting a GITLAB_PRIVATE_TOKEN env var");
 }
 
-#[derive(Debug,Deserialize)]
-pub struct Iid{
+#[derive(Debug, Deserialize)]
+pub struct Iid {
     iid: u64,
 }
 
@@ -124,7 +126,7 @@ fn main() {
             title,
             use_issue_name,
             allow_collaboration,
-            auto_merge
+            auto_merge,
         ])
         .get_matches();
     // Deconstruct the required inputs.
@@ -152,11 +154,18 @@ fn main() {
     let commit_prefix = matches.value_of("commit-prefix");
     let remove_branch = matches.is_present("remove-branch");
     let squash_commits = matches.is_present("squash-commits");
-    let description = matches.value_of("description")
-        .unwrap_or(&format!("Merge with {}",source_branch.clone())).to_owned();
-    let title = matches.value_of("title").unwrap_or(
-        &format!("{}{}", commit_prefix.unwrap_or(""), source_branch.clone())
-    ).to_owned();
+    let description = matches
+        .value_of("description")
+        .unwrap_or(&format!("Merge with {}", source_branch.clone()))
+        .to_owned();
+    let title = matches
+        .value_of("title")
+        .unwrap_or(&format!(
+            "{}{}",
+            commit_prefix.unwrap_or(""),
+            source_branch.clone()
+        ))
+        .to_owned();
     let use_issue_name = matches.is_present("use-issue-name");
     let allow_collaboration = matches.is_present("allow-collaboration");
     let auto_merge = matches.is_present("auto-merge");
@@ -171,7 +180,7 @@ fn main() {
     .expect("Requires token.");
 
     // Uses cmd args to build a merge request.
-    let endpoint : CreateMergeRequest = CreateMergeRequest::builder()
+    let endpoint: CreateMergeRequest = CreateMergeRequest::builder()
         .project(project_id)
         .source_branch(source_branch)
         .target_branch(target_branch)
