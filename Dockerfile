@@ -9,5 +9,5 @@ rm -R target
 FROM alpine:latest
 WORKDIR /usr/src/gitlab_auto_merge
 COPY --from=builder /usr/src/gitlab_auto_merge .
-ENV PATH=$PATH:/usr/src/gitlab_auto_merge/bin
+ENV PATH=$PATH:/usr/src/gitlab_auto_merge
 CMD ["gitlab_auto_merge"]
