@@ -1,6 +1,6 @@
 use clap::Clap;
 use gitlab::api::projects::merge_requests::{
-    ApproveMergeRequest, CreateMergeRequest, MergeRequestState, MergeRequests,
+    ApproveMergeRequest, CreateMergeRequest, MergeRequestState, MergeRequests
 };
 use gitlab::api::Query;
 use gitlab::Gitlab;
@@ -191,16 +191,17 @@ fn main() {
         .remove_source_branch(remove_branch)
         .build()
         .expect("Error creating merge request");
-
+    println!("{:?}",&endpoint);
     // Post our merge request.
     let iid: Iid = endpoint.query(&client).unwrap();
-
+    println!("merge request id = {:?}",iid);
     if auto_merge {
         let endpoint: ApproveMergeRequest = ApproveMergeRequest::builder()
             .project(project_id)
             .merge_request(iid.iid)
             .build()
             .expect("Error building ApproveMergeRequest");
+        println!("{:?}",&endpoint);
         let _ = gitlab::api::ignore(endpoint).query(&client).unwrap();
     }
 }
