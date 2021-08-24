@@ -193,7 +193,7 @@ fn main() {
     if auto_merge {
         let endpoint: ApproveMergeRequest = ApproveMergeRequest::builder()
             .project(project_id)
-            .merge_request(iid.iid)
+            .merge_request(iid.value())
             .build()
             .expect("Error building ApproveMergeRequest");
         println!("{:?}", &endpoint);
