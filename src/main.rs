@@ -13,6 +13,7 @@ lazy_static! {
 }
 
 fn main() {
+    println!("Test");
     let source_branch = clap::Arg::new("source-branch")
         .long("source-branch")
         .required(true)
@@ -186,17 +187,17 @@ fn main() {
         .remove_source_branch(remove_branch)
         .build()
         .expect("Error creating merge request");
-    println!("{:?}", &endpoint);
+    eprintln!("CreateMergerequest: \n{:?}", &endpoint);
     // Post our merge request.
     let iid: IssueId = endpoint.query(&client).unwrap();
-    println!("merge request id = {:?}", iid);
+    eprintln!("merge request id = {:?}", iid);
     if auto_merge {
         let endpoint: ApproveMergeRequest = ApproveMergeRequest::builder()
             .project(project_id)
             .merge_request(iid.value())
             .build()
             .expect("Error building ApproveMergeRequest");
-        println!("{:?}", &endpoint);
+        eprintln!("ApproveMergeRequest:\n {:?}", &endpoint);
         let _ = gitlab::api::ignore(endpoint).query(&client).unwrap();
     }
 }
