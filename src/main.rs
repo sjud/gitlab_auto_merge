@@ -1,6 +1,6 @@
 use clap::Clap;
 use gitlab::api::projects::merge_requests::{
-    ApproveMergeRequest, CreateMergeRequest, MergeRequestState, MergeRequests
+    ApproveMergeRequest, CreateMergeRequest, MergeRequestState, MergeRequests,
 };
 use gitlab::api::Query;
 use gitlab::{Gitlab, IssueId};
@@ -11,7 +11,6 @@ lazy_static! {
     static ref TOKEN: String =
         std::env::var("GITLAB_PRIVATE_TOKEN").expect("Expecting a GITLAB_PRIVATE_TOKEN env var");
 }
-
 
 fn main() {
     let source_branch = clap::Arg::new("source-branch")
@@ -187,17 +186,17 @@ fn main() {
         .remove_source_branch(remove_branch)
         .build()
         .expect("Error creating merge request");
-    println!("{:?}",&endpoint);
+    println!("{:?}", &endpoint);
     // Post our merge request.
     let iid: IssueId = endpoint.query(&client).unwrap();
-    println!("merge request id = {:?}",iid);
+    println!("merge request id = {:?}", iid);
     if auto_merge {
         let endpoint: ApproveMergeRequest = ApproveMergeRequest::builder()
             .project(project_id)
             .merge_request(iid.iid)
             .build()
             .expect("Error building ApproveMergeRequest");
-        println!("{:?}",&endpoint);
+        println!("{:?}", &endpoint);
         let _ = gitlab::api::ignore(endpoint).query(&client).unwrap();
     }
 }
