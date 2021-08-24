@@ -6,7 +6,7 @@ apk add openssl-dev && \
 cargo install --path . && \
 rm -R target
 
-FROM alpine:latest
+FROM alpine:3.14
 WORKDIR /usr/bin
 COPY --from=builder /usr/src/gitlab_auto_merge/gitlab_auto_merge .
 #ENV PATH=$PATH:/usr/src/gitlab_auto_merge
