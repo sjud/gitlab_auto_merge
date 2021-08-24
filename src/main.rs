@@ -3,7 +3,7 @@ use gitlab::api::projects::merge_requests::{
     ApproveMergeRequest, CreateMergeRequest, MergeRequestState, MergeRequests
 };
 use gitlab::api::Query;
-use gitlab::Gitlab;
+use gitlab::{Gitlab, IssueId};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
@@ -12,10 +12,6 @@ lazy_static! {
         std::env::var("GITLAB_PRIVATE_TOKEN").expect("Expecting a GITLAB_PRIVATE_TOKEN env var");
 }
 
-#[derive(Debug, Deserialize)]
-pub struct Iid {
-    iid: u64,
-}
 
 fn main() {
     let source_branch = clap::Arg::new("source-branch")
@@ -193,7 +189,7 @@ fn main() {
         .expect("Error creating merge request");
     println!("{:?}",&endpoint);
     // Post our merge request.
-    let iid: Iid = endpoint.query(&client).unwrap();
+    let iid: IssueId = endpoint.query(&client).unwrap();
     println!("merge request id = {:?}",iid);
     if auto_merge {
         let endpoint: ApproveMergeRequest = ApproveMergeRequest::builder()
