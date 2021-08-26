@@ -1,9 +1,6 @@
-use clap::Clap;
-use gitlab::api::projects::merge_requests::{
-    ApproveMergeRequest, CreateMergeRequest, MergeRequestState, MergeRequests,
-};
+use gitlab::api::projects::merge_requests::{CreateMergeRequest, MergeMergeRequest};
 use gitlab::api::Query;
-use gitlab::{Gitlab, IssueId};
+use gitlab::{Gitlab, MergeRequest};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
@@ -11,7 +8,8 @@ lazy_static! {
     static ref TOKEN: String =
         std::env::var("GITLAB_PRIVATE_TOKEN").expect("Expecting a GITLAB_PRIVATE_TOKEN env var");
 }
-
+#[derive(Debug,Deserialize)]
+struct Iid(u64);
 fn main() {
     println!("Test");
     let source_branch = clap::Arg::new("source-branch")
@@ -34,13 +32,6 @@ fn main() {
         .forbid_empty_values(true)
         .takes_value(true)
         .about("The GitLab URL i.e. gitlab.com.  [required]");
-
-    let user_id = clap::Arg::new("user-id")
-        .long("user-id")
-        .required(true)
-        .forbid_empty_values(true)
-        .takes_value(true)
-        .about("The GitLab user ID(s) to assign the created MR to.  [required]");
 
     let insecure = clap::Arg::new("insecure")
         .long("insecure")
@@ -112,7 +103,6 @@ fn main() {
             source_branch,
             project_id,
             gitlab_url,
-            user_id,
             insecure,
             target_branch,
             commit_prefix,
@@ -126,7 +116,7 @@ fn main() {
         ])
         .get_matches();
     // Deconstruct the required inputs.
-    let (source_branch, project_id, gitlab_url, user_id) = (
+    let (source_branch, project_id, gitlab_url) = (
         matches
             .value_of("source-branch")
             .expect("Source branch required."),
@@ -140,7 +130,6 @@ fn main() {
                 .expect("Gitlab URL required."),
         )
         .expect("Expecting valid URL"),
-        matches.value_of("user-id").expect("User ID required"),
     );
     let insecure = matches.is_present("insecure");
     // A merge request is issued to the source branch unless given a target
@@ -162,18 +151,19 @@ fn main() {
             source_branch.clone()
         ))
         .to_owned();
-    let use_issue_name = matches.is_present("use-issue-name");
     let allow_collaboration = matches.is_present("allow-collaboration");
     let auto_merge = matches.is_present("auto-merge");
 
-    let project_path = gitlab_url.path().clone();
-
     // Get host from parsed URL and TOKEN from Env Var
-    let client = Gitlab::new(
-        gitlab_url.host_str().expect("Expecting valid host"),
-        TOKEN.clone(),
-    )
-    .expect("Requires token.");
+    let gitlab_input =
+        (gitlab_url.host_str().expect("Expecting valid host"),
+                                    TOKEN.clone(),);
+    let client = match insecure {
+        false => Gitlab::new(gitlab_input.0,gitlab_input.1)
+        .expect("Requires token."),
+        true => Gitlab::new_insecure(gitlab_input.0,gitlab_input.1)
+            .expect("Requires token."),
+    };
 
     // Uses cmd args to build a merge request.
     let endpoint: CreateMergeRequest = CreateMergeRequest::builder()
@@ -189,15 +179,17 @@ fn main() {
         .expect("Error creating merge request");
     eprintln!("CreateMergerequest: \n{:?}", &endpoint);
     // Post our merge request.
-    let iid: IssueId = endpoint.query(&client).unwrap();
-    eprintln!("merge request id = {:?}", iid);
+    let response: MergeRequest = endpoint.query(&client).unwrap();
+
+    eprintln!("merge request id = {:?}", response.iid.value());
     if auto_merge {
-        let endpoint: ApproveMergeRequest = ApproveMergeRequest::builder()
+        let merge :MergeMergeRequest = MergeMergeRequest::builder()
             .project(project_id)
-            .merge_request(iid.value())
+            .merge_request(response.iid.value())
+            .merge_when_pipeline_succeeds(true)
             .build()
-            .expect("Error building ApproveMergeRequest");
-        eprintln!("ApproveMergeRequest:\n {:?}", &endpoint);
-        let _ = gitlab::api::ignore(endpoint).query(&client).unwrap();
+            .expect("Error merging MergeMergeRequest");
+        eprintln!("ApproveMergeRequest:\n {:?}", &merge);
+        let _ = gitlab::api::ignore(merge).query(&client).unwrap();
     }
 }
