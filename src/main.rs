@@ -215,6 +215,7 @@ fn main() {
             .project(project_id)
             .merge_request(response.iid.value())
             .merge_when_pipeline_succeeds(false)
+            .should_remove_source_branch(true)
             .build()
             .expect("Error merging MergeMergeRequest");
         eprintln!("ApproveMergeRequest:\n {:?}", &merge);
