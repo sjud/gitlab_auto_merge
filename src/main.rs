@@ -185,7 +185,7 @@ fn main() {
         let merge: MergeMergeRequest = MergeMergeRequest::builder()
             .project(project_id)
             .merge_request(response.iid.value())
-            .merge_when_pipeline_succeeds(true)
+            .merge_when_pipeline_succeeds(false)
             .build()
             .expect("Error merging MergeMergeRequest");
         eprintln!("ApproveMergeRequest:\n {:?}", &merge);
