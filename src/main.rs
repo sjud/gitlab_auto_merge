@@ -8,7 +8,7 @@ lazy_static! {
     static ref TOKEN: String =
         std::env::var("GITLAB_PRIVATE_TOKEN").expect("Expecting a GITLAB_PRIVATE_TOKEN env var");
 }
-#[derive(Debug,Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Iid(u64);
 fn main() {
     println!("Test");
@@ -155,14 +155,13 @@ fn main() {
     let auto_merge = matches.is_present("auto-merge");
 
     // Get host from parsed URL and TOKEN from Env Var
-    let gitlab_input =
-        (gitlab_url.host_str().expect("Expecting valid host"),
-                                    TOKEN.clone(),);
+    let gitlab_input = (
+        gitlab_url.host_str().expect("Expecting valid host"),
+        TOKEN.clone(),
+    );
     let client = match insecure {
-        false => Gitlab::new(gitlab_input.0,gitlab_input.1)
-        .expect("Requires token."),
-        true => Gitlab::new_insecure(gitlab_input.0,gitlab_input.1)
-            .expect("Requires token."),
+        false => Gitlab::new(gitlab_input.0, gitlab_input.1).expect("Requires token."),
+        true => Gitlab::new_insecure(gitlab_input.0, gitlab_input.1).expect("Requires token."),
     };
 
     // Uses cmd args to build a merge request.
@@ -183,7 +182,7 @@ fn main() {
 
     eprintln!("merge request id = {:?}", response.iid.value());
     if auto_merge {
-        let merge :MergeMergeRequest = MergeMergeRequest::builder()
+        let merge: MergeMergeRequest = MergeMergeRequest::builder()
             .project(project_id)
             .merge_request(response.iid.value())
             .merge_when_pipeline_succeeds(true)
