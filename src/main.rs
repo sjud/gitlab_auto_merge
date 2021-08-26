@@ -1,6 +1,7 @@
 use gitlab::api::projects::merge_requests::{CreateMergeRequest, MergeMergeRequest};
+use gitlab::api::projects::repository::branches::CreateBranch;
 use gitlab::api::Query;
-use gitlab::{Gitlab, MergeRequest};
+use gitlab::{Gitlab, MergeRequest, RepoBranch};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
@@ -95,8 +96,18 @@ fn main() {
     let auto_merge = clap::Arg::new("auto-merge")
         .long("auto-merge")
         .takes_value(false)
+        .requires("inter-branch-title")
         .short('a')
         .about("Automatically approves the issued merge request if true.");
+
+    let inter_branch_title = clap::Arg::new("inter-branch-title")
+        .long("inter-branch-title")
+        .takes_value(true)
+        .requires("auto-merge")
+        .about(
+            "Used with auto_merge feature to branch pipelined branch and automerge the \
+        intermediary branch.",
+        );
 
     let matches = clap::App::new("gitlab_auto_merge")
         .args(&[
@@ -113,6 +124,7 @@ fn main() {
             use_issue_name,
             allow_collaboration,
             auto_merge,
+            inter_branch_title,
         ])
         .get_matches();
     // Deconstruct the required inputs.
@@ -153,6 +165,7 @@ fn main() {
         .to_owned();
     let allow_collaboration = matches.is_present("allow-collaboration");
     let auto_merge = matches.is_present("auto-merge");
+    let inter_branch_title = matches.value_of("inter-branch-title");
 
     // Get host from parsed URL and TOKEN from Env Var
     let gitlab_input = (
@@ -164,24 +177,40 @@ fn main() {
         true => Gitlab::new_insecure(gitlab_input.0, gitlab_input.1).expect("Requires token."),
     };
 
-    // Uses cmd args to build a merge request.
-    let endpoint: CreateMergeRequest = CreateMergeRequest::builder()
-        .project(project_id)
-        .source_branch(source_branch)
-        .target_branch(target_branch)
-        .title(title)
-        .description(description)
-        .allow_collaboration(allow_collaboration)
-        .squash(squash_commits)
-        .remove_source_branch(remove_branch)
-        .build()
-        .expect("Error creating merge request");
-    eprintln!("CreateMergerequest: \n{:?}", &endpoint);
     // Post our merge request.
-    let response: MergeRequest = endpoint.query(&client).unwrap();
 
-    eprintln!("merge request id = {:?}", response.iid.value());
     if auto_merge {
+        //Build intermediary branch
+        let intermediary: CreateBranch = CreateBranch::builder()
+            .project(project_id)
+            .branch(inter_branch_title.expect(
+                "We need auto-merge to get here and we need title for \
+            auto-merge so we should never see this expect.",
+            ))
+            .ref_(source_branch)
+            .build()
+            .expect("Error creating intermediary branch");
+        let inter_branch: RepoBranch = intermediary
+            .query(&client)
+            .expect("Create intermediary branch error:");
+        eprintln!("inter_branch title = {:?}", &inter_branch.name);
+        //Create merge request from that branch
+        let endpoint: CreateMergeRequest = CreateMergeRequest::builder()
+            .project(project_id)
+            .source_branch(inter_branch.name)
+            .target_branch(target_branch)
+            .title(title)
+            .description(description)
+            .allow_collaboration(allow_collaboration)
+            .squash(squash_commits)
+            .remove_source_branch(remove_branch)
+            .build()
+            .expect("Error creating merge request");
+        let response: MergeRequest = endpoint
+            .query(&client)
+            .expect("Error creating merge request for intermediary:");
+        eprintln!("merge request id = {:?}", response.iid.value());
+        //MergeMergeRequest from intermediary branch
         let merge: MergeMergeRequest = MergeMergeRequest::builder()
             .project(project_id)
             .merge_request(response.iid.value())
@@ -190,5 +219,20 @@ fn main() {
             .expect("Error merging MergeMergeRequest");
         eprintln!("ApproveMergeRequest:\n {:?}", &merge);
         let _ = gitlab::api::ignore(merge).query(&client).unwrap();
+    } else {
+        // Build merge request without worrying about intermediary
+        let endpoint: CreateMergeRequest = CreateMergeRequest::builder()
+            .project(project_id)
+            .source_branch(source_branch)
+            .target_branch(target_branch)
+            .title(title)
+            .description(description)
+            .allow_collaboration(allow_collaboration)
+            .squash(squash_commits)
+            .remove_source_branch(remove_branch)
+            .build()
+            .expect("Error creating merge request");
+        eprintln!("CreateMergerequest: \n{:?}", &endpoint);
+        let _ = gitlab::api::ignore(endpoint).query(&client).unwrap();
     }
 }
