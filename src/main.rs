@@ -214,7 +214,7 @@ fn main() {
         let merge: MergeMergeRequest = MergeMergeRequest::builder()
             .project(project_id)
             .merge_request(response.iid.value())
-            .merge_when_pipeline_succeeds(false)
+            .merge_when_pipeline_succeeds(true)
             .should_remove_source_branch(true)
             .build()
             .expect("Error merging MergeMergeRequest");
